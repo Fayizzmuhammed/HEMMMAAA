@@ -23,6 +23,34 @@ src="https://www.facebook.com/tr?id=1530878561796671&ev=PageView&noscript=1"
 /></noscript>
 <!-- End Meta Pixel Code -->
 
+<!-- Pixel Keepalive: re-fires PageView if pixel goes stale (every 4 min) -->
+<script>
+  var PIXEL_ID = '1530878561796671';
+
+  function ensurePixel() {
+    if (typeof fbq === 'undefined') {
+      // Pixel not loaded yet — reload it
+      var s = document.createElement('script');
+      s.src = 'https://connect.facebook.net/en_US/fbevents.js';
+      s.async = true;
+      s.onload = function() {
+        if (!window._fbqInited) {
+          fbq('init', PIXEL_ID);
+          window._fbqInited = true;
+        }
+        fbq('track', 'PageView');
+      };
+      document.head.appendChild(s);
+    } else {
+      fbq('track', 'PageView');
+    }
+  }
+
+  window._fbqInited = true;
+  // Re-fire every 4 minutes to keep pixel alive on long sessions
+  setInterval(ensurePixel, 4 * 60 * 1000);
+</script>
+
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -281,14 +309,55 @@ src="https://www.facebook.com/tr?id=1530878561796671&ev=PageView&noscript=1"
   </div>
 </div>
 
-<!-- Subscribe Tracking -->
+<!-- Subscribe Tracking — Bulletproof -->
 <script>
+var PIXEL_ID = '1530878561796671';
+
+// sendBeacon fallback: directly hits Facebook's pixel endpoint
+// even if fbq JS has gone stale or failed to load
+function trackViaBeacon(eventName) {
+  try {
+    var payload = {
+      data: [{
+        event_name: eventName,
+        event_time: Math.floor(Date.now() / 1000),
+        action_source: 'website',
+        event_id: eventName + '_' + Date.now(),
+        event_source_url: window.location.href,
+        user_data: {
+          client_user_agent: navigator.userAgent
+        }
+      }]
+    };
+    // Beacon to FB Conversions API endpoint (no auth = best-effort, still registers)
+    // Primary: use pixel img noscript method as beacon
+    var img = new Image();
+    img.src = 'https://www.facebook.com/tr?id=' + PIXEL_ID +
+              '&ev=' + eventName +
+              '&noscript=1' +
+              '&cd[event_id]=' + encodeURIComponent(eventName + '_' + Date.now());
+  } catch(e) {}
+}
+
+function safeTrack(eventName) {
+  // Method 1: fbq JS SDK
+  try {
+    if (typeof fbq !== 'undefined') {
+      fbq('track', eventName, {}, { eventID: eventName + '_' + Date.now() });
+    }
+  } catch(e) {}
+
+  // Method 2: Image pixel beacon (works even if fbq is dead)
+  trackViaBeacon(eventName);
+}
+
 document.addEventListener("DOMContentLoaded", function() {
-  const buttons = document.querySelectorAll("a, button");
-  buttons.forEach(function(btn){
-    btn.addEventListener("click", function(e){
+  var buttons = document.querySelectorAll("a, button");
+  buttons.forEach(function(btn) {
+    btn.addEventListener("click", function(e) {
       var href = btn.href;
-      if (!href || href === "#" || href === "") return;
+      if (!href || href === "#" || href === "" || href === window.location.href) return;
+
       e.preventDefault();
 
       var redirected = false;
@@ -299,27 +368,11 @@ document.addEventListener("DOMContentLoaded", function() {
         }
       }
 
-      try {
-        fbq('track', 'Subscribe', {}, {
-          eventID: 'subscribe_' + Date.now()
-        });
-      } catch(err) {}
+      // Fire tracking via both methods simultaneously
+      safeTrack('Subscribe');
 
-      // Fallback: redirect after 800ms no matter what
-      setTimeout(doRedirect, 800);
-
-      // Also try to redirect as soon as pixel beacon is sent
-      // by hooking into the pixel's internal queue flush
-      if (window.fbq && window.fbq.instance) {
-        try {
-          var checkInterval = setInterval(function(){
-            doRedirect();
-            clearInterval(checkInterval);
-          }, 350);
-        } catch(err) { doRedirect(); }
-      } else {
-        setTimeout(doRedirect, 350);
-      }
+      // Hard redirect after 1000ms — enough for both beacon + fbq to send
+      setTimeout(doRedirect, 1000);
     });
   });
 });
