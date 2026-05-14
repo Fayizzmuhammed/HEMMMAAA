@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<!-- saved from url=(0063)file:///C:/Users/Windows%2010/Downloads/hemant-landing-red.html -->
-<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-
+<html lang="en">
+<head>
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Premium</title>
 
 <!-- Meta Pixel Code -->
-<script src="./PremiumMAIN_files/1530878561796671" async=""></script><script async="" src="./PremiumMAIN_files/fbevents.js.download"></script><script>
+<script>
 !function(f,b,e,v,n,t,s)
 {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
 n.callMethod.apply(n,arguments):n.queue.push(arguments)};
@@ -245,7 +245,7 @@ src="https://www.facebook.com/tr?id=1530878561796671&ev=PageView&noscript=1"
 
 <div class="bg-glow"></div>
 <div class="bg-glow2"></div>
-<div class="particles" id="particles"><div class="p" style="left: 15.6871vw; width: 1.54276px; height: 1.54276px; animation-duration: 6.20741s; animation-delay: 6.91912s;"></div><div class="p" style="left: 39.1579vw; width: 2.62834px; height: 2.62834px; animation-duration: 11.3608s; animation-delay: 7.91512s;"></div><div class="p" style="left: 5.08851vw; width: 1.9633px; height: 1.9633px; animation-duration: 6.58707s; animation-delay: 4.16666s;"></div><div class="p" style="left: 75.2684vw; width: 1.50413px; height: 1.50413px; animation-duration: 9.39459s; animation-delay: 2.12631s;"></div><div class="p" style="left: 73.7176vw; width: 2.35375px; height: 2.35375px; animation-duration: 9.44794s; animation-delay: 2.60104s;"></div><div class="p" style="left: 46.2937vw; width: 1.32955px; height: 1.32955px; animation-duration: 12.8114s; animation-delay: 0.534515s;"></div><div class="p" style="left: 28.9608vw; width: 2.03412px; height: 2.03412px; animation-duration: 9.43633s; animation-delay: 3.45293s;"></div><div class="p" style="left: 36.6035vw; width: 2.43507px; height: 2.43507px; animation-duration: 13.8179s; animation-delay: 3.65377s;"></div><div class="p" style="left: 81.5289vw; width: 2.69456px; height: 2.69456px; animation-duration: 13.9546s; animation-delay: 2.66364s;"></div><div class="p" style="left: 99.9809vw; width: 1.85556px; height: 1.85556px; animation-duration: 6.62662s; animation-delay: 4.57507s;"></div><div class="p" style="left: 85.158vw; width: 2.40095px; height: 2.40095px; animation-duration: 6.17666s; animation-delay: 6.83701s;"></div><div class="p" style="left: 56.2217vw; width: 1.79978px; height: 1.79978px; animation-duration: 10.0689s; animation-delay: 1.11511s;"></div><div class="p" style="left: 50.9285vw; width: 1.86819px; height: 1.86819px; animation-duration: 10.4535s; animation-delay: 5.59696s;"></div><div class="p" style="left: 1.40292vw; width: 1.30483px; height: 1.30483px; animation-duration: 6.70994s; animation-delay: 5.12664s;"></div><div class="p" style="left: 55.5028vw; width: 1.83435px; height: 1.83435px; animation-duration: 10.6691s; animation-delay: 1.52924s;"></div><div class="p" style="left: 80.4381vw; width: 1.26181px; height: 1.26181px; animation-duration: 12.9696s; animation-delay: 5.92417s;"></div><div class="p" style="left: 33.3614vw; width: 2.15012px; height: 2.15012px; animation-duration: 11.5904s; animation-delay: 2.69378s;"></div><div class="p" style="left: 63.4495vw; width: 2.53041px; height: 2.53041px; animation-duration: 13.3121s; animation-delay: 7.01645s;"></div></div>
+<div class="particles" id="particles"></div>
 
 <div class="card">
   <div class="badge">
@@ -262,7 +262,7 @@ src="https://www.facebook.com/tr?id=1530878561796671&ev=PageView&noscript=1"
   </div>
 
   <h1>Welcome</h1>
-  <div class="subtitle">Private • Members Only</div>
+  <div class="subtitle">Private &bull; Members Only</div>
 
   <div class="divider"></div>
 
@@ -286,11 +286,40 @@ src="https://www.facebook.com/tr?id=1530878561796671&ev=PageView&noscript=1"
 document.addEventListener("DOMContentLoaded", function() {
   const buttons = document.querySelectorAll("a, button");
   buttons.forEach(function(btn){
-    btn.addEventListener("click", function(){
-      fbq('track', 'Subscribe');
-      setTimeout(function(){
-        window.location.href = btn.href;
-      }, 300);
+    btn.addEventListener("click", function(e){
+      var href = btn.href;
+      if (!href || href === "#" || href === "") return;
+      e.preventDefault();
+
+      var redirected = false;
+      function doRedirect() {
+        if (!redirected) {
+          redirected = true;
+          window.open(href, btn.target || "_self");
+        }
+      }
+
+      try {
+        fbq('track', 'Subscribe', {}, {
+          eventID: 'subscribe_' + Date.now()
+        });
+      } catch(err) {}
+
+      // Fallback: redirect after 800ms no matter what
+      setTimeout(doRedirect, 800);
+
+      // Also try to redirect as soon as pixel beacon is sent
+      // by hooking into the pixel's internal queue flush
+      if (window.fbq && window.fbq.instance) {
+        try {
+          var checkInterval = setInterval(function(){
+            doRedirect();
+            clearInterval(checkInterval);
+          }, 350);
+        } catch(err) { doRedirect(); }
+      } else {
+        setTimeout(doRedirect, 350);
+      }
     });
   });
 });
@@ -311,6 +340,5 @@ document.addEventListener("DOMContentLoaded", function() {
   }
 </script>
 
-
-
-</body></html>
+</body>
+</html>
